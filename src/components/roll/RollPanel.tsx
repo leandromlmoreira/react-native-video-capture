@@ -1,44 +1,58 @@
+import { useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import { formatClock } from "../../domain/format";
+import { formatClock, formatTakeCount } from "../../domain/format";
 import { Recording, totalDuration } from "../../domain/recording";
 import { colors, fonts } from "../../theme/tokens";
 import { EmptyRoll } from "./EmptyRoll";
-import { RecordingCard } from "./RecordingCard";
+import { TakeFrame } from "./TakeFrame";
 
 interface RollPanelProps {
   recordings: Recording[];
   loading: boolean;
   activeId?: string;
   onOpen: (recording: Recording) => void;
+  onRecord?: () => void;
 }
+
+const gap = 14;
 
 function summary(recordings: Recording[]) {
-  if (recordings.length === 0) return "Nenhuma tomada ainda";
-  const label = recordings.length === 1 ? "tomada" : "tomadas";
-  return `${recordings.length} ${label} · ${formatClock(totalDuration(recordings))} no total`;
+  if (recordings.length === 0) return "NADA GRAVADO AINDA";
+  return `${formatTakeCount(recordings.length)} · ${formatClock(totalDuration(recordings))} no total`.toUpperCase();
 }
 
-export function RollPanel({ recordings, loading, activeId, onOpen }: RollPanelProps) {
+export function RollPanel({ recordings, loading, activeId, onOpen, onRecord }: RollPanelProps) {
+  const [width, setWidth] = useState(0);
+  const columns = width > 560 ? 3 : 2;
+  const itemWidth = width > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
+
   return (
     <View style={styles.panel}>
       <View style={styles.header}>
-        <Text style={styles.title}>Rolo</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          Rolo
+        </Text>
         <Text style={styles.summary}>{summary(recordings)}</Text>
       </View>
       {loading ? (
-        <ActivityIndicator color={colors.tungsten} style={styles.loading} />
+        <ActivityIndicator color={colors.bone} style={styles.loading} />
       ) : recordings.length === 0 ? (
-        <EmptyRoll />
+        <EmptyRoll onRecord={onRecord} />
       ) : (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {recordings.map((recording) => (
-            <RecordingCard
-              key={recording.id}
-              recording={recording}
-              active={recording.id === activeId}
-              onPress={() => onOpen(recording)}
-            />
-          ))}
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.grid} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+            {itemWidth > 0
+              ? recordings.map((recording) => (
+                  <TakeFrame
+                    key={recording.id}
+                    recording={recording}
+                    width={itemWidth}
+                    active={recording.id === activeId}
+                    onPress={() => onOpen(recording)}
+                  />
+                ))
+              : null}
+          </View>
         </ScrollView>
       )}
     </View>
@@ -50,27 +64,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 12,
-    paddingBottom: 16,
-    gap: 4,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingBottom: 18,
+    marginBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
   },
   title: {
-    fontFamily: fonts.displayHeavy,
-    fontSize: 32,
-    color: colors.paper,
-    letterSpacing: -1,
+    fontFamily: fonts.displayBlack,
+    fontSize: 44,
+    lineHeight: 44,
+    color: colors.bone,
+    textTransform: "uppercase",
   },
   summary: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
+    fontFamily: fonts.monoMedium,
+    fontSize: 10.5,
+    letterSpacing: 1,
     color: colors.muted,
-    letterSpacing: 0.4,
   },
   loading: {
     marginTop: 48,
   },
-  list: {
-    gap: 4,
-    paddingBottom: 24,
+  scroll: {
+    paddingBottom: 32,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: gap,
+    rowGap: 22,
   },
 });

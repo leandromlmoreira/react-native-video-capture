@@ -1,46 +1,50 @@
-import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, ClipPath, Defs, G, Path, Rect } from "react-native-svg";
-import { colors, fonts } from "../../theme/tokens";
+import Svg, { Circle, Path } from "react-native-svg";
+import { piePath, symbolGeometry } from "../../brand/geometry";
+import { wordmark } from "../../brand/wordmark";
+import { colors } from "../../theme/tokens";
 
-const stripes = [0, 8, 16, 24].map((x) => `M${x} 11h4l4-10h-4z`).join(" ");
+interface SymbolShapesProps {
+  cx: number;
+  cy: number;
+  radius: number;
+  lit?: boolean;
+  tone?: string;
+}
 
-export function LogoMark({ size = 32 }: { size?: number }) {
+export function SymbolShapes({ cx, cy, radius, lit = true, tone = colors.bone }: SymbolShapesProps) {
+  const geometry = symbolGeometry(radius);
   return (
-    <Svg width={size} height={size} viewBox="0 0 32 32">
-      <Rect x="1" y="1" width="30" height="30" rx="9" fill={colors.tungsten} />
-      <Defs>
-        <ClipPath id="logo-band">
-          <Path d="M1 11V10a9 9 0 0 1 9-9h12a9 9 0 0 1 9 9v1z" />
-        </ClipPath>
-      </Defs>
-      <G clipPath="url(#logo-band)">
-        <Rect width="32" height="11" fill={colors.ink} />
-        <Path d={stripes} fill={colors.tungsten} />
-      </G>
-      <Circle cx="16" cy="20.5" r="5.6" fill="none" stroke={colors.ink} strokeWidth="2.2" />
-      <Circle cx="16" cy="20.5" r="1.8" fill={colors.rec} />
+    <>
+      <Circle cx={cx} cy={cy} r={geometry.ring} stroke={tone} strokeWidth={geometry.stroke} fill="none" />
+      <Path d={piePath(cx, cy, geometry.pie, geometry.sweep)} fill={tone} />
+      <Circle cx={cx} cy={cy} r={geometry.dot} fill={lit ? colors.tally : colors.ink} />
+    </>
+  );
+}
+
+export function LogoMark({ size = 32, lit = true }: { size?: number; lit?: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityLabel="Tomada" accessibilityRole="image">
+      <SymbolShapes cx={32} cy={32} radius={30} lit={lit} />
     </Svg>
   );
 }
 
-export function Wordmark({ size = 32 }: { size?: number }) {
+const pad = 4;
+
+export function Wordmark({ height = 24, tone = colors.bone }: { height?: number; tone?: string }) {
+  const boxWidth = wordmark.width + pad * 2;
+  const boxHeight = wordmark.height + pad * 2;
   return (
-    <View style={styles.row}>
-      <LogoMark size={size} />
-      <Text style={[styles.word, { fontSize: size * 0.72 }]}>tomada</Text>
-    </View>
+    <Svg
+      width={(boxWidth / boxHeight) * height}
+      height={height}
+      viewBox={`${-pad} ${-pad} ${boxWidth} ${boxHeight}`}
+      accessibilityLabel="Tomada"
+      accessibilityRole="image"
+    >
+      <Path d={wordmark.letters} fill={tone} />
+      <SymbolShapes cx={wordmark.circle.cx} cy={wordmark.circle.cy} radius={wordmark.circle.r} tone={tone} />
+    </Svg>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  word: {
-    fontFamily: fonts.displayHeavy,
-    color: colors.paper,
-    letterSpacing: -0.8,
-  },
-});

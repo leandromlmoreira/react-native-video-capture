@@ -13,14 +13,15 @@ export function ViewfinderFallback({ message, onDemo, onRetry }: ViewfinderFallb
   return (
     <View style={styles.layer}>
       <View style={styles.card}>
-        <View style={styles.icon}>
-          <Icon name="camera" size={22} color={colors.tungsten} />
+        <View style={styles.ring}>
+          <Icon name="cameraOff" size={26} color={colors.bone} />
         </View>
+        <Text style={styles.code}>SEM SINAL</Text>
         <Text style={styles.title}>Câmera fora de cena</Text>
         <Text style={styles.body}>{message}</Text>
         <View style={styles.actions}>
-          {onDemo ? <Button label="Usar demonstração" icon="spark" onPress={onDemo} /> : null}
-          <Button label="Tentar de novo" variant="ghost" onPress={onRetry} />
+          <Button label="Tentar de novo" icon="retry" onPress={onRetry} />
+          {onDemo ? <Button label="Usar demonstração" variant="ghost" onPress={onDemo} /> : null}
         </View>
       </View>
     </View>
@@ -29,39 +30,46 @@ export function ViewfinderFallback({ message, onDemo, onRetry }: ViewfinderFallb
 
 const styles = StyleSheet.create({
   layer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
     backgroundColor: colors.sunken,
   },
   card: {
-    maxWidth: 380,
+    width: "100%",
+    maxWidth: 360,
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     padding: 28,
-    borderRadius: radii.xl,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
   },
-  icon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    backgroundColor: colors.tungstenSoft,
+  ring: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: colors.lineStrong,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 6,
+  },
+  code: {
+    fontFamily: fonts.monoSemi,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: colors.tallyText,
   },
   title: {
-    fontFamily: fonts.display,
-    color: colors.paper,
-    fontSize: 22,
-    letterSpacing: -0.4,
+    fontFamily: fonts.displayBlack,
+    fontSize: 30,
+    lineHeight: 32,
+    color: colors.bone,
+    textTransform: "uppercase",
+    textAlign: "center",
   },
   body: {
     fontFamily: fonts.body,
@@ -71,7 +79,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   actions: {
-    marginTop: 8,
+    marginTop: 10,
     gap: 10,
     alignSelf: "stretch",
   },

@@ -1,5 +1,7 @@
 const months = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
+export const framesPerSecond = 30;
+
 function pad(value: number, size = 2) {
   return String(value).padStart(size, "0");
 }
@@ -9,23 +11,43 @@ export function padTake(take: number) {
 }
 
 export function formatTimecode(ms: number) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const frames = Math.floor(((ms % 1000) / 1000) * 30);
-  const minutes = Math.floor(totalSeconds / 60);
+  const safe = Math.max(0, ms);
+  const totalSeconds = Math.floor(safe / 1000);
+  const frames = Math.floor(((safe % 1000) / 1000) * framesPerSecond);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return `${pad(minutes)}:${pad(seconds)}:${pad(frames)}`;
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}:${pad(frames)}`;
 }
 
 export function formatClock(ms: number) {
-  const totalSeconds = Math.round(ms / 1000);
+  const totalSeconds = Math.round(Math.max(0, ms) / 1000);
   return `${Math.floor(totalSeconds / 60)}:${pad(totalSeconds % 60)}`;
 }
 
-export function formatDateTime(timestamp: number) {
+export function formatCountdown(ms: number) {
+  const totalSeconds = Math.ceil(Math.max(0, ms) / 1000);
+  return `${Math.floor(totalSeconds / 60)}:${pad(totalSeconds % 60)}`;
+}
+
+export function formatDay(timestamp: number) {
   const date = new Date(timestamp);
-  return `${date.getDate()} ${months[date.getMonth()]} · ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${pad(date.getDate())} ${months[date.getMonth()]}`;
+}
+
+export function formatTime(timestamp: number) {
+  const date = new Date(timestamp);
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function formatDateTime(timestamp: number) {
+  return `${formatDay(timestamp)} · ${formatTime(timestamp)}`;
 }
 
 export function formatLimit(seconds: number) {
   return seconds === 0 ? "Livre" : `${seconds}s`;
+}
+
+export function formatTakeCount(count: number) {
+  return `${pad(count)} ${count === 1 ? "tomada" : "tomadas"}`;
 }

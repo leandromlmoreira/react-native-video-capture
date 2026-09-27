@@ -1,20 +1,28 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Viewfinder } from "../capture/Viewfinder";
 import { ViewfinderHandle } from "../capture/viewfinder.types";
-import { CaptureSource, Facing, NewRecording, Recording, sourceLabel, sourceShortLabel } from "../domain/recording";
-import { FramingGuides } from "../components/studio/FramingGuides";
+import { CameraRail } from "../components/studio/CameraRail";
+import { CountdownOverlay } from "../components/studio/CountdownOverlay";
+import { HudBar } from "../components/studio/HudBar";
 import { LimitPicker } from "../components/studio/LimitPicker";
+import { LimitTape } from "../components/studio/LimitTape";
 import { RecordButton } from "../components/studio/RecordButton";
+import { RecordingFrame } from "../components/studio/RecordingFrame";
 import { RollShortcut } from "../components/studio/RollShortcut";
 import { Scrims } from "../components/studio/Scrims";
-import { TallyLight } from "../components/studio/TallyLight";
 import { ViewfinderFallback } from "../components/studio/ViewfinderFallback";
-import { Eyebrow } from "../components/ui/Eyebrow";
+import { ViewfinderMarks } from "../components/studio/ViewfinderMarks";
 import { IconButton } from "../components/ui/IconButton";
 import { Notice } from "../components/ui/Notice";
+import { nextCountdown } from "../domain/countdown";
+import { limitProgress, remainingWholeSeconds } from "../domain/limit";
+import { CaptureSource, Facing, NewRecording, nextTake, Recording } from "../domain/recording";
+import { cues } from "../feedback/cues";
+import { haptics } from "../feedback/haptics";
 import { useNotice } from "../hooks/useNotice";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useTakeRecorder } from "../hooks/useTakeRecorder";
 import { colors } from "../theme/tokens";
 
@@ -33,14 +41,21 @@ function captureSource(demo: boolean): CaptureSource {
   return Platform.OS === "web" ? "webcam" : "camera";
 }
 
-const sourceTone = { demo: "tungsten", webcam: "go", camera: "go" } as const;
+function useFinalStretchCue(recording: boolean, limit: number, elapsed: number) {
+  const seconds = recording ? remainingWholeSeconds(limit, elapsed) : null;
+  useEffect(() => {
+    if (seconds !== null && seconds > 0 && seconds <= 5) cues.finalSecond();
+  }, [seconds]);
+}
 
 export function StudioScreen(props: StudioScreenProps) {
   const { demo, wide, recordings } = props;
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const viewfinder = useRef<ViewfinderHandle>(null);
   const [facing, setFacing] = useState<Facing>(Platform.OS === "web" ? "front" : "back");
   const [limit, setLimit] = useState(30);
+  const [countdown, setCountdown] = useState(3);
   const [grid, setGrid] = useState(true);
   const [ready, setReady] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -51,6 +66,7 @@ export function StudioScreen(props: StudioScreenProps) {
   const take = useTakeRecorder({
     viewfinder,
     limitSeconds: limit,
+    countdownSeconds: countdown,
     facing,
     source,
     onCapture: props.onCapture,
@@ -58,7 +74,11 @@ export function StudioScreen(props: StudioScreenProps) {
     onError: notice.show,
   });
   const recording = take.phase === "recording";
-  const progress = limit > 0 ? take.elapsed / (limit * 1000) : 0;
+  const locked = take.phase !== "idle";
+  useFinalStretchCue(recording, limit, take.elapsed);
+
+  const topInset = wide ? 22 : insets.top + 14;
+  const limitPicker = <LimitPicker value={limit} disabled={locked} onChange={setLimit} />;
 
   return (
     <View style={[styles.stage, wide && styles.stageWide]}>
@@ -74,15 +94,26 @@ export function StudioScreen(props: StudioScreenProps) {
         onFailure={(message) => (ready ? notice.show(message) : setFailure(message))}
       />
       <Scrims />
-      <FramingGuides showGrid={grid} />
+      <ViewfinderMarks showGrid={grid} inset={wide ? 16 : 10} top={topInset + 64} />
+      <CountdownOverlay digit={take.digit} />
+      <RecordingFrame live={recording} radius={wide ? 22 : 0} />
 
-      <View style={[styles.top, wide ? styles.topWide : { paddingTop: insets.top + 26 }]}>
-        <TallyLight recording={recording} elapsedMs={take.elapsed} label={ready ? "PRONTO" : "AGUARDE"} />
-        <View style={styles.topRight}>
-          <Eyebrow label={wide ? sourceLabel[source] : sourceShortLabel[source]} tone={sourceTone[source]} />
-        </View>
+      <View style={[styles.top, wide && styles.topWide, { paddingTop: topInset }]}>
+        <HudBar phase={take.phase} ready={ready} elapsedMs={take.elapsed} take={nextTake(recordings)} wide={wide} />
+        <LimitTape limitSeconds={limit} elapsedMs={take.elapsed} recording={recording} />
       </View>
-      <View style={styles.notice}>
+
+      <View style={[styles.rail, { top: topInset + 92 }, wide && styles.railWide]}>
+        <CameraRail
+          grid={grid}
+          canFlip={!demo}
+          locked={locked}
+          onToggleGrid={() => setGrid((value) => !value)}
+          onFlip={() => setFacing((value) => (value === "back" ? "front" : "back"))}
+        />
+      </View>
+
+      <View pointerEvents="none" style={[styles.notice, { top: topInset + 96 }]}>
         <Notice message={notice.message} tone="error" />
       </View>
 
@@ -97,35 +128,32 @@ export function StudioScreen(props: StudioScreenProps) {
         />
       ) : null}
 
-      <View style={[styles.bottom, { paddingBottom: wide ? 32 : insets.bottom + 32 }]}>
-        <LimitPicker value={limit} disabled={take.phase !== "idle"} onChange={setLimit} />
-        <View style={styles.deck}>
-          <View style={styles.side}>
-            {wide ? (
-              <IconButton icon="grid" label="Grade de enquadramento" active={grid} size={56} onPress={() => setGrid((value) => !value)} />
-            ) : (
-              <RollShortcut latest={recordings[0]} count={recordings.length} onPress={props.onOpenRoll} />
-            )}
+      <View style={[styles.bottom, wide && styles.bottomWide, { paddingBottom: wide ? 40 : insets.bottom + 26 }]}>
+        {wide ? null : limitPicker}
+        <View style={wide ? styles.deckWide : styles.deck}>
+          <View style={wide ? styles.sideWide : styles.side}>
+            {wide ? limitPicker : <RollShortcut latest={recordings[0]} count={recordings.length} onPress={props.onOpenRoll} />}
           </View>
           <RecordButton
-            recording={recording}
-            busy={take.phase === "saving"}
+            phase={take.phase}
             disabled={!ready || Boolean(failure)}
-            progress={progress}
+            progress={limitProgress(limit, take.elapsed)}
+            reducedMotion={reduced}
             onPress={take.toggle}
           />
-          <View style={styles.side}>
-            {demo ? (
-              wide ? null : <IconButton icon="grid" label="Grade de enquadramento" active={grid} size={56} onPress={() => setGrid((value) => !value)} />
-            ) : (
-              <IconButton
-                icon="flip"
-                label="Girar câmera"
-                size={56}
-                disabled={take.phase !== "idle"}
-                onPress={() => setFacing((value) => (value === "back" ? "front" : "back"))}
-              />
-            )}
+          <View style={[wide ? styles.sideWide : styles.side, styles.sideEnd]}>
+            <IconButton
+              icon="timer"
+              label={countdown > 0 ? `Contagem regressiva de ${countdown} segundos` : "Contagem regressiva desligada"}
+              caption={countdown > 0 ? `${countdown}S` : "OFF"}
+              size={58}
+              active={countdown > 0}
+              disabled={locked}
+              onPress={() => {
+                haptics.select();
+                setCountdown(nextCountdown);
+              }}
+            />
           </View>
         </View>
       </View>
@@ -140,41 +168,41 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   stageWide: {
-    borderRadius: 26,
+    borderRadius: 22,
   },
   top: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 22,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    paddingHorizontal: 16,
     gap: 12,
   },
   topWide: {
-    paddingTop: 28,
-    paddingHorizontal: 28,
+    paddingHorizontal: 26,
   },
-  topRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  rail: {
+    position: "absolute",
+    right: 14,
+  },
+  railWide: {
+    right: 26,
   },
   notice: {
     position: "absolute",
-    top: 110,
-    left: 16,
-    right: 16,
+    left: 72,
+    right: 72,
   },
   bottom: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 24,
-    gap: 22,
+    paddingHorizontal: 20,
+    gap: 20,
+  },
+  bottomWide: {
+    paddingHorizontal: 52,
   },
   deck: {
     flexDirection: "row",
@@ -184,8 +212,20 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
   },
-  side: {
-    width: 64,
+  deckWide: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 24,
+  },
+  side: {
+    width: 72,
+    flexDirection: "row",
+  },
+  sideWide: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  sideEnd: {
+    justifyContent: "flex-end",
   },
 });

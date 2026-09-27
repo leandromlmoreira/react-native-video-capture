@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 import { formatLimit } from "../../domain/format";
+import { limitOptions } from "../../domain/limit";
+import { haptics } from "../../feedback/haptics";
 import { colors, fonts, radii } from "../../theme/tokens";
 import { Tappable } from "../ui/Tappable";
-
-export const limitOptions = [15, 30, 60, 0];
 
 interface LimitPickerProps {
   value: number;
@@ -20,13 +20,17 @@ export function LimitPicker({ value, disabled, onChange }: LimitPickerProps) {
           <Tappable
             key={option}
             accessibilityRole="radio"
+            accessibilityLabel={option === 0 ? "Sem limite" : `${option} segundos`}
             accessibilityState={{ selected, disabled }}
             disabled={disabled}
-            onPress={() => onChange(option)}
+            onPress={() => {
+              if (!selected) haptics.select();
+              onChange(option);
+            }}
             pressScale={0.94}
             style={({ hovered }) => [styles.option, hovered && !selected && styles.hovered, selected && styles.selected]}
           >
-            <Text style={[styles.label, selected && styles.labelSelected]}>{formatLimit(option)}</Text>
+            <Text style={[styles.label, selected && styles.labelSelected]}>{formatLimit(option).toUpperCase()}</Text>
           </Tappable>
         );
       })}
@@ -37,9 +41,9 @@ export function LimitPicker({ value, disabled, onChange }: LimitPickerProps) {
 const styles = StyleSheet.create({
   track: {
     flexDirection: "row",
-    padding: 4,
+    padding: 3,
     gap: 2,
-    borderRadius: radii.pill,
+    borderRadius: radii.sm,
     backgroundColor: colors.glass,
     borderWidth: 1,
     borderColor: colors.lineStrong,
@@ -49,23 +53,24 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   option: {
-    paddingHorizontal: 14,
-    height: 32,
-    borderRadius: radii.pill,
+    minWidth: 54,
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 7,
     alignItems: "center",
     justifyContent: "center",
   },
   hovered: {
-    backgroundColor: "rgba(255, 238, 214, 0.08)",
+    backgroundColor: colors.boneWash,
   },
   selected: {
-    backgroundColor: colors.paper,
+    backgroundColor: colors.bone,
   },
   label: {
-    fontFamily: fonts.monoMedium,
+    fontFamily: fonts.monoSemi,
     fontSize: 12,
-    color: colors.paper,
-    letterSpacing: 0.4,
+    color: colors.bone,
+    letterSpacing: 0.8,
   },
   labelSelected: {
     color: colors.ink,
