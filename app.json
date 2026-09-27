@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "video-capture",
+    "name": "Tomada",
     "slug": "video-capture",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0A09",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -19,11 +19,36 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Tomada · estúdio de vídeo de bolso",
+      "shortName": "Tomada",
+      "backgroundColor": "#0B0A09",
+      "themeColor": "#0B0A09",
+      "description": "Grave, reveja e compartilhe tomadas de vídeo com cronômetro, limite de duração e rolo local."
     },
     "plugins": [
       "expo-sharing",
-      "expo-video"
-    ]
+      "expo-video",
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O Tomada usa a câmera para gravar suas tomadas.",
+          "microphonePermission": "O Tomada usa o microfone para gravar o som das tomadas.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "O Tomada salva as tomadas na sua galeria.",
+          "savePhotosPermission": "O Tomada salva as tomadas na sua galeria."
+        }
+      ]
+    ],
+    "backgroundColor": "#0B0A09",
+    "experiments": {
+      "baseUrl": "/react-native-video-capture"
+    }
   }
 }

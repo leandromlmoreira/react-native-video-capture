@@ -1,76 +1,76 @@
-# 🎥 Video Capture
+# Tomada
 
-Desafio de projeto **"Captura de Vídeo"** da trilha
-[Formação React Native Developer](https://web.dio.me/track/formacao-react-native-developer)
-(DIO). Inspirado no projeto de referência do instrutor
-([digitalinnovationone/trilha-react-native-expo-video](https://github.com/digitalinnovationone/trilha-react-native-expo-video)).
+Estúdio de vídeo de bolso: grave tomadas com cronômetro e limite de duração, reveja no player, compartilhe e organize tudo num rolo local.
 
-## O que o projeto faz
+**[Ver ao vivo](https://leandromlmoreira.github.io/react-native-video-capture/)**
 
-- Pede permissão de câmera, microfone e galeria.
-- Grava vídeo pela câmera do device (frontal ou traseira, com botão de girar).
-- Ao parar de gravar, abre um player (`expo-video`) para reproduzir o vídeo.
-- Botões para **salvar na galeria** (`expo-media-library`) ou **compartilhar**
-  (`expo-sharing`).
+![Estúdio do Tomada no desktop, em modo demonstração, com o rolo de tomadas ao lado](docs/preview.png)
 
-## Tecnologias
+<p>
+  <img src="docs/preview-mobile.png" width="240" alt="Estúdio no celular" />
+  <img src="docs/rolo-mobile.png" width="240" alt="Rolo de tomadas no celular" />
+  <img src="docs/permissoes-mobile.png" width="240" alt="Tela de permissões no celular" />
+</p>
 
-- React Native + Expo (SDK 57), TypeScript
-- `expo-camera` (gravação), `expo-video` (reprodução — substituiu o `expo-av`
-  usado na aula, que está depreciado a partir do Expo SDK 52)
-- `expo-media-library`, `expo-sharing`
+![Fluxo completo: entrar no modo demonstração, gravar e abrir o player](docs/preview.gif)
 
-## Como executar
+## Funcionalidades
 
-```bash
-npm install
-npm run android   # ou ios — recomendado, ver nota abaixo
-npm run web       # renderiza e mostra a tela de permissão (ver limitações)
-```
+- **Gravação com estado real**: botão que vira "parar" com animação, luz de REC pulsando, timecode `mm:ss:quadros` e anel de progresso até o limite.
+- **Limite de duração**: 15 s, 30 s, 60 s ou livre. No aparelho vira `maxDuration` do `expo-camera`; na web, um timer encerra o `MediaRecorder`.
+- **Enquadramento**: cantos de visor e grade dos terços que liga e desliga; câmera frontal ou traseira.
+- **Rolo de tomadas**: cada gravação vira uma tomada numerada com pôster próprio em SVG, data, duração e origem. Fica salvo entre sessões.
+- **Player**: `expo-video` com controles nativos, ficha da tomada e ações de compartilhar, salvar na galeria e excluir com confirmação.
+- **Permissões bem explicadas**: tela dedicada com o status de câmera, microfone e galeria, e atalho para os ajustes quando o sistema bloqueia.
+- **Web de verdade**: usa a webcam do navegador via `MediaRecorder` quando existe e é permitida. Sem webcam, o modo demonstração grava uma cena gerada em tempo real num `<canvas>`, com o mesmo fluxo do app.
 
-## ⚠️ Limitação real e honesta sobre o teste
+## Como funciona por plataforma
 
-Este é o único dos 5 desafios de projeto que **precisa de um dispositivo físico
-ou emulador Android/iOS** para ser testado de verdade — gravação de vídeo não
-é suportada pelo `expo-camera` no modo web, e `expo-media-library` (salvar na
-galeria) **não existe na web** (por isso criei `src/mediaLibrary.web.ts`, um
-stub que evita quebrar o bundle web e desliga a função "salvar" nesse
-ambiente, deixando isso explícito na interface).
+| | Android / iOS | Web |
+| --- | --- | --- |
+| Visor | `CameraView` do `expo-camera` | `<video>` com `getUserMedia` ou `<canvas>` animado |
+| Gravação | `recordAsync` / `stopRecording` | `MediaRecorder` (MP4 quando o navegador suporta, senão WebM) |
+| Rolo | arquivo movido para `Paths.document` + metadados no AsyncStorage | vídeo e metadados no IndexedDB |
+| Compartilhar | `expo-sharing` | Web Share API com arquivo, ou download |
+| Galeria | `expo-media-library` | não se aplica |
 
-O que eu **de fato verifiquei** rodando `npm run web`:
-- O app compila e roda sem erros.
-- A tela de permissão aparece e o botão "Conceder permissões" dispara o
-  pedido de câmera/microfone do navegador corretamente.
+A troca é feita pela resolução de arquivos do Metro (`Viewfinder.web.tsx`, `recordingStore.web.ts`, `useCaptureAccess.web.ts`, `shareRecording.web.ts`, `mediaLibrary.web.ts`), sem `if (Platform.OS === "web")` espalhado pelos componentes.
 
-O que eu **não pude verificar** (ambiente sem emulador Android/iOS nem
-acesso a câmera real neste setup):
-- Gravar um vídeo de verdade e reproduzi-lo no player.
-- Salvar na galeria e compartilhar.
+## Stack
 
-Se você tem o Android Studio ou um celular com Expo Go, rode
-`npm run android` (ou `ios`) para testar o fluxo completo.
+- Expo SDK 57, React Native 0.86, React 19, TypeScript
+- `expo-camera`, `expo-video`, `expo-media-library`, `expo-sharing`, `expo-file-system`
+- `@react-native-async-storage/async-storage`, `react-native-svg`, `react-native-safe-area-context`
+- Tipografia via `@expo-google-fonts`: Bricolage Grotesque, Figtree e DM Mono
+- Deploy da versão web no GitHub Pages por GitHub Actions
 
 ## Estrutura
 
 ```
+App.tsx                  # fluxo: permissões, estúdio, rolo e player
 src/
-├── mediaLibrary.ts       # reexporta expo-media-library (nativo)
-└── mediaLibrary.web.ts   # stub para web (Metro escolhe pela plataforma)
-App.tsx                   # câmera, gravação, player, salvar/compartilhar
+├── capture/             # visor nativo e web, gravador web e cena de demonstração
+├── components/          # access, brand, player, roll, studio e ui
+├── domain/              # tipo Recording e formatação de tempo e datas
+├── hooks/               # permissões, rolo, gravação, cronômetro e avisos
+├── screens/             # tela de permissões, estúdio, rolo e cabeçalho largo
+├── storage/             # persistência nativa e web
+└── theme/               # tokens de cor, tipografia, raios e curvas de animação
 ```
 
-## O que aprendi
+## Como rodar
 
-- **Resolução de arquivo por plataforma do Metro** (`arquivo.web.ts` vs
-  `arquivo.ts`): a forma correta de isolar uma dependência nativa que não
-  existe na web, sem poluir o componente com `if (Platform.OS === "web")`
-  em todo lugar que a usa.
-- `expo-av` está sendo substituído por `expo-video`/`expo-audio` a partir do
-  SDK 52 — ao seguir uma aula um pouco mais antiga, vale checar a
-  documentação atual antes de instalar a dependência "clássica".
-- Fluxo de permissões em cadeia (câmera → microfone → galeria), cada uma com
-  seu próprio hook (`useCameraPermissions`, `useMicrophonePermissions`,
-  `MediaLibrary.usePermissions`), e por que vale agrupar a checagem
-  (`permissionsGranted`) em vez de checar cada uma espalhada pelo JSX.
-- A importância de **testar de verdade antes de dizer que funciona**: só
-  reportar como funcionando o que realmente rodei e vi na tela.
+```bash
+npm install
+npm run android   # ou npm run ios
+npm run web       # webcam do navegador ou modo demonstração
+```
+
+A gravação no aparelho precisa de um dispositivo físico ou de um development build. Para gerar a versão web estática:
+
+```bash
+npx tsc --noEmit
+npx expo export --platform web
+```
+
+<sub>Projeto que nasceu no desafio "Captura de Vídeo" da Formação React Native Developer da DIO.</sub>
