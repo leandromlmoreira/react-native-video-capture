@@ -2,7 +2,7 @@
 
 Estúdio de vídeo de bolso: grave tomadas com cronômetro e limite de duração, reveja no player, compartilhe e organize tudo num rolo local.
 
-**[Ver ao vivo](https://leandromlmoreira.github.io/react-native-video-capture/)**
+**[Ver ao vivo](https://leandromlmoreira.github.io/video-capture/)**
 
 ![Estúdio do Tomada no desktop, em modo demonstração, com o rolo de tomadas ao lado](docs/preview.png)
 
