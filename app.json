@@ -48,7 +48,7 @@
     ],
     "backgroundColor": "#0B0A09",
     "experiments": {
-      "baseUrl": "/react-native-video-capture"
+      "baseUrl": "/video-capture"
     }
   }
 }
