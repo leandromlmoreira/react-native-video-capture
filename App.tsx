@@ -1,8 +1,8 @@
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect, useState } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Ambient } from "./src/components/brand/Ambient";
 import { LogoMark } from "./src/components/brand/Logo";
 import { PlayerSheet } from "./src/components/player/PlayerSheet";
 import { RollPanel } from "./src/components/roll/RollPanel";
@@ -16,10 +16,12 @@ import { WideHeader } from "./src/screens/WideHeader";
 import { colors, wideBreakpoint } from "./src/theme/tokens";
 import { useAppFonts } from "./src/theme/useAppFonts";
 
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 function Splash() {
   return (
     <View style={[styles.root, styles.center]}>
-      <LogoMark size={56} />
+      <LogoMark size={72} />
     </View>
   );
 }
@@ -52,7 +54,6 @@ function Studio() {
     <View style={styles.root}>
       {wide ? (
         <View style={styles.wide}>
-          <Ambient />
           <WideHeader demo={demo} onBackToSetup={access.backToSetup} />
           <View style={styles.columns}>
             <View style={styles.stage}>{studio}</View>
@@ -76,6 +77,11 @@ function Studio() {
 
 export default function App() {
   const fontsReady = useAppFonts();
+
+  useEffect(() => {
+    if (fontsReady) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsReady]);
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
@@ -95,27 +101,27 @@ const styles = StyleSheet.create({
   },
   wide: {
     flex: 1,
-    padding: 24,
-    gap: 20,
+    padding: 22,
+    gap: 18,
   },
   columns: {
     flex: 1,
     flexDirection: "row",
-    gap: 20,
+    gap: 18,
   },
   stage: {
     flex: 1,
-    padding: 6,
-    borderRadius: 32,
-    backgroundColor: "rgba(255, 238, 214, 0.04)",
+    padding: 5,
+    borderRadius: 27,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
   },
   aside: {
-    width: 380,
-    paddingTop: 20,
-    paddingHorizontal: 8,
-    borderRadius: 32,
+    width: 384,
+    paddingTop: 22,
+    paddingHorizontal: 22,
+    borderRadius: 27,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,

@@ -1,13 +1,16 @@
-import { RefObject, useCallback, useState } from "react";
+import { RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { ViewfinderHandle } from "../capture/viewfinder.types";
+import { countdownDigit } from "../domain/countdown";
 import { CaptureSource, Facing, NewRecording, Recording } from "../domain/recording";
+import { cues } from "../feedback/cues";
 import { useElapsed } from "./useElapsed";
 
-export type TakePhase = "idle" | "recording" | "saving";
+export type TakePhase = "idle" | "countdown" | "recording" | "saving";
 
 interface TakeRecorderOptions {
   viewfinder: RefObject<ViewfinderHandle | null>;
   limitSeconds: number;
+  countdownSeconds: number;
   facing: Facing;
   source: CaptureSource;
   onCapture: (input: NewRecording) => Promise<Recording>;
@@ -22,34 +25,54 @@ function describe(error: unknown) {
 export function useTakeRecorder(options: TakeRecorderOptions) {
   const [phase, setPhase] = useState<TakePhase>("idle");
   const elapsed = useElapsed(phase === "recording");
+  const countdownElapsed = useElapsed(phase === "countdown");
+  const digit = phase === "countdown" ? countdownDigit(countdownElapsed, options.countdownSeconds) : null;
+  const latest = useRef(options);
+  latest.current = options;
 
   const record = useCallback(async () => {
-    const handle = options.viewfinder.current;
-    if (!handle) return;
+    const current = latest.current;
+    const handle = current.viewfinder.current;
+    if (!handle) {
+      setPhase("idle");
+      return;
+    }
     setPhase("recording");
+    cues.rolling();
     const startedAt = Date.now();
     try {
-      const result = await handle.start(options.limitSeconds);
+      const result = await handle.start(current.limitSeconds);
       if (!result) return;
+      cues.cut();
       setPhase("saving");
-      const recording = await options.onCapture({
+      const recording = await current.onCapture({
         ...result,
         durationMs: Date.now() - startedAt,
-        facing: options.facing,
-        source: options.source,
+        facing: current.facing,
+        source: current.source,
       });
-      options.onFinished(recording);
+      current.onFinished(recording);
     } catch (error) {
-      options.onError(describe(error));
+      current.onError(describe(error));
     } finally {
       setPhase("idle");
     }
-  }, [options]);
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "countdown") return;
+    if (digit === null) record();
+    else cues.countdown(digit);
+  }, [phase, digit, record]);
 
   const toggle = useCallback(() => {
-    if (phase === "recording") options.viewfinder.current?.stop();
-    else if (phase === "idle") record();
-  }, [phase, record, options.viewfinder]);
+    if (phase === "recording") latest.current.viewfinder.current?.stop();
+    else if (phase === "countdown") setPhase("idle");
+    else if (phase === "idle") {
+      if (latest.current.countdownSeconds > 0) setPhase("countdown");
+      else record();
+    }
+  }, [phase, record]);
 
-  return { phase, elapsed, toggle };
+  return { phase, elapsed, digit, toggle };
 }
