@@ -1,8 +1,11 @@
-// expo-media-library não tem suporte na web. Este stub evita que o bundle
-// web quebre ao importar o módulo nativo, e deixa claro que a
-// funcionalidade "salvar na galeria" só existe em Android/iOS.
-export function usePermissions(): [{ granted: boolean }, () => Promise<{ granted: boolean }>] {
-  return [{ granted: true }, async () => ({ granted: true })];
+type WebPermission = { granted: boolean; canAskAgain: boolean; status: string };
+
+const granted: WebPermission = { granted: true, canAskAgain: true, status: "granted" };
+
+export const isLibraryAvailable = false;
+
+export function usePermissions(): [WebPermission, () => Promise<WebPermission>] {
+  return [granted, async () => granted];
 }
 
 export async function saveToLibraryAsync(_uri: string): Promise<void> {
